@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <title>Color Ordering Puzzle!</title>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+    <!-- Custom JS -->
+    <script type="text/javascript">
+
+        function setRandomColors(){
+            document.getElementById('topLeftColor').value = getRandomColor();
+            document.getElementById('topRightColor').value = getRandomColor();
+            document.getElementById('bottomLeftColor').value = getRandomColor();
+            document.getElementById('bottomRightColor').value = getRandomColor();
+        }
+
+        function getRandomColor(){
+            return '#' + (Math.random().toString(16) + "000000").substring(2,8);
+        }
+
+        function startGame(){
+            let gameAreaNode = document.getElementById('gameArea');
+            gameAreaNode.innerHTML = "";
+
+            const rows = document.getElementById('rowSize').value;
+            const cols = document.getElementById('colSize').value;
+
+            for(var i=0; i<rows;i++){
+                let rowsNode = document.createElement("div");
+                rowsNode.className = "game-area-row";
+
+                for(var j=0; j<cols;j++){
+                    let cellNode = document.createElement("div");
+
+                    if((i == 0 || i == (rows-1)) && (j==0 || j == (cols-1))){
+                        cellNode.className = "game-area-cell corner-cell";
+                    }else{
+                        cellNode.className = "game-area-cell";
+                        cellNode.addEventListener("click", clickCell, true);
+                    }
+
+                    cellNode.setAttribute('row', i);
+                    cellNode.setAttribute('col', j);
+
+                    cellNode.style.backgroundColor = getCellColor(i,j,rows,cols);
+
+                    rowsNode.appendChild(cellNode);
+                }
+
+                gameAreaNode.append(rowsNode);
+            }
+
+            randomizeGameBoard();
+            lastClickedCell = null;
+
+            document.getElementById("stepTwoAlert").innerHTML = "";
+            $(".card-body")[1].className = "card-body";
+
+            $("#headingTwo h5 button").click();
+        }
+
+        function randomizeGameBoard(){
+            lastClickedCell = null;
+            let cells = $('div[class="game-area-cell"]');
+
+            for(let i=0;i<cells.length*4;i++){
+                let index = Math.floor(Math.random() * (cells.length));
+                cells[index].click();
+            }
+        }
+
+        var lastClickedCell = null;
+
+        function clickCell(e){
+            ge = e;
+
+            if(lastClickedCell == null){
+                lastClickedCell = e.target;
+                e.target.className = "game-area-cell selected-cell";
+            }else{
+                lastClickedCell.className = "game-area-cell";
+
+                const tempCol = lastClickedCell.getAttribute('col');
+                const tempRow = lastClickedCell.getAttribute('row');
+                const tempColor = lastClickedCell.style.backgroundColor;
+
+                lastClickedCell.setAttribute('col', e.target.getAttribute('col'));
+                lastClickedCell.setAttribute('row', e.target.getAttribute('row'));
+                lastClickedCell.style.backgroundColor = e.target.style.backgroundColor;
+
+                e.target.setAttribute('col', tempCol);
+                e.target.setAttribute('row', tempRow);
+                e.target.style.backgroundColor = tempColor;
+
+                lastClickedCell = null;
+
+                validateWinCondition();
+            }
+        }
+
+        function validateWinCondition(){
+
+            let cells = $(".game-area-cell");
+
+            let previousValue = -1;
+
+            for(let i=0;i<cells.length;i++){
+                let currentValue = (cells[i].getAttribute('row') * 100) + (cells[i].getAttribute('col') * 1);
+                if(currentValue < previousValue) return false;
+
+                previousValue = currentValue;
+            }
+
+            document.getElementById("stepTwoAlert").innerHTML = "<div class=\"alert alert-dismissible fade show\" role=\"alert\"><strong>Congratulations!</strong> You have finished the puzzle!</div>";
+
+            $(".card-body")[1].className = "card-body alert-success";
+
+
+        }
+
+        function getCellColor(row, col, maxRow, maxCol){
+
+            const topLeftColor = document.getElementById('topLeftColor').value;
+            const topRightColor = document.getElementById('topRightColor').value;
+            const bottomLeftColor = document.getElementById('bottomLeftColor').value;
+            const bottomRightColor = document.getElementById('bottomRightColor').value;
+
+            const vRatio = (row) / (maxRow-1);
+            const hRatio = (col) / (maxCol-1);
+
+            const topPositionColor = blendColors(topLeftColor,topRightColor,hRatio);
+            const bottomPositionColor = blendColors(bottomLeftColor,bottomRightColor,hRatio);
+
+            const finalColor = blendColors(topPositionColor,bottomPositionColor,vRatio);
+
+            return finalColor;
+        }
+
+        function blendColors(colorA, colorB, amount) {
+            const [rA, gA, bA] = colorA.match(/\w\w/g).map((c) => parseInt(c, 16));
+            const [rB, gB, bB] = colorB.match(/\w\w/g).map((c) => parseInt(c, 16));
+            const r = Math.round(rA + (rB - rA) * amount).toString(16).padStart(2, '0');
+            const g = Math.round(gA + (gB - gA) * amount).toString(16).padStart(2, '0');
+            const b = Math.round(bA + (bB - bA) * amount).toString(16).padStart(2, '0');
+            return '#' + r + g + b;
+        }
+
+    </script>
+    <style>
+        .color-input{
+            height: 40px;
+        }
+
+        .game-area-cell{
+            border: dashed gray 1px;
+            padding: 0px 4px;
+            min-height: 50px;
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .game-area-cell:hover{
+            border: dashed gray 3px;
+            padding: 0px 2px;
+        }
+
+        .corner-cell:hover{
+            cursor: not-allowed;
+            border: dashed gray 1px;
+            padding: 0px 4px;
+        }
+
+        .selected-cell{
+            border: dashed gray 5px;
+            padding: 0px 0px;
+        }
+
+        .selected-cell:hover{
+            border: dashed gray 5px;
+            padding: 0px 0px;
+        }
+
+        .game-area-row{
+            display: flex;
+        }
+
+        .game-area{
+            display: flex;
+            justify-content: space-evenly;
+            flex-flow: column;
+            border-radius: 40px;
+            overflow: hidden;
+        }
+
+    </style>
+</head>
+<body>
+
+<main role="main" class="container">
+    <h1 class="mt-5">Color Ordering Puzzle!</h1>
+    <p class="lead"></p>
+
+    <div id="accordion">
+        <div class="card">
+            <div class="card-header" id="headingOne">
+                <h5 class="mb-0">
+                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Step #1: Configure your puzzle
+                    </button>
+                </h5>
+            </div>
+
+            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                <div class="card-body">
+                    <form>
+                        <div class="form-group row">
+                            <label for="topLeftColor" class="col-sm-2 col-form-label">Top Left Color</label>
+                            <div class="col-sm-4">
+                                <input type="color" class="form-control color-input" id="topLeftColor" name="topLeftColor" value="#22ffff">
+                            </div>
+                            <label for="topRightColor" class="col-sm-2 col-form-label">Top Right Color</label>
+                            <div class="col-sm-4">
+                                <input type="color" class="form-control color-input" id="topRightColor" name="topRightColor" value="#aa0000">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="bottomLeftColor" class="col-sm-2 col-form-label">Bottom Left Color</label>
+                            <div class="col-sm-4">
+                                <input type="color" class="form-control color-input" id="bottomLeftColor" name="bottomLeftColor" value="#000000">
+                            </div>
+                            <label for="bottomRightColor" class="col-sm-2 col-form-label">Bottom Right Color</label>
+                            <div class="col-sm-4">
+                                <input type="color" class="form-control color-input" id="bottomRightColor" name="bottomRightColor" value="#ffffff">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="rowSize" class="col-sm-2 col-form-label">Number of Rows</label>
+                            <div class="col-sm-10">
+                                <input type="number" class="form-control" step="5" min="5" max="30" id="rowSize" placeholder="Number of Rows" value="5">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="colSize" class="col-sm-2 col-form-label">Number of Columns</label>
+                            <div class="col-sm-10">
+                                <input type="number" class="form-control" step="5" min="5" max="30" id="colSize" placeholder="Number of Columns" value="5">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label class="col-sm-2 col-form-label"></label>
+                            <div class="col-sm-4">
+                                <button type="button" class="btn btn-secondary mb-2" onclick="setRandomColors()">Randomize Colors</button>
+                            </div>
+                            <div class="col-sm-6">
+                                <button type="button" class="btn btn-primary mb-2" onclick="startGame()">Start Game</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div  id="stepOneAlert"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" id="headingTwo">
+                <h5 class="mb-0">
+                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        Step #2: Order your Colors!
+                    </button>
+                </h5>
+            </div>
+            <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                <div class="card-body">
+                    <div id="stepTwoAlert"></div>
+                    <div id="gameArea" class="game-area">
+                        <div class="game-area-row">
+                            <div class="game-area-cell"></div>
+                            <div class="game-area-cell"></div>
+                            <div class="game-area-cell"></div>
+                        </div>
+                        <div class="game-area-row">
+                            <div class="game-area-cell"></div>
+                            <div class="game-area-cell"></div>
+                            <div class="game-area-cell"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>
